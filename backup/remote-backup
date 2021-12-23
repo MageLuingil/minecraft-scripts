@@ -1,0 +1,100 @@
+#!/bin/bash
+# 
+# Minecraft Remote Backup Cron
+# 
+# USAGE:
+# remote-backup [-1246Cqv] [-c cipher] [-F ssh_config] [-i identity] [-k days]
+#               [-o option] [-p port] [user@]hostname remote_path
+# 
+# OPTIONS:
+#     In addition to the following options, remote-backup inherits any options
+#     used by both scp and ssh
+# 
+#     -k days  The number of days to keep archives on the remote server
+#              (by default keep only one backup)
+# 
+#     -p port  The port to connect to on the remote host
+# 
+# Add a crontab entry for this script:
+# 12 5 * * * minecraft /path/to/scripts/remote-backup hostname path/on/remote
+
+MINECRAFT_SERVER_PATH="${MINECRAFT_SERVER_PATH:-/var/games/minecraft/servers/}"
+
+remote_backup_world() {
+	local serverpath="$(dirname "$1")"
+	local worldname="$(basename "$1")"
+	local filename="$worldname-backup-$(date '+%Y-%m-%d-%H-%M-%S').tar.gz"
+
+	echo "Backing up $worldname to $ssh_host..."
+	
+	# Create a backup on remote
+	ssh "${ssh_opts[@]}" "$ssh_host" "mkdir -p \"$ssh_path/$worldname\"" && \
+		tar -cz -C "$serverpath" -f - "$worldname" | \
+		ssh "${ssh_opts[@]}" "$ssh_host" "( cat > $ssh_path/$worldname/$filename )"
+	
+	# Clean up old remote backups
+	if [[ $? -eq 0 ]]; then
+		ssh "${ssh_opts[@]}" "$ssh_host" "find \"$ssh_path/$worldname\" -maxdepth 1 -type f -mmin +5 -delete"
+	else
+		echo "Failed to copy latest backup for $worldname to the remote" >&2
+		return 1
+	fi
+}
+
+main() {
+	# Init variables
+	local OPTION OPTARG OPTIND
+	local ssh_host ssh_path
+	local -a ssh_opts
+	
+	# Parse options
+	while getopts "1246Cc:F:i:k:o:p:qv" OPTION
+	do
+		case "$OPTION" in
+			# Script-specific options
+			k) echo "Warning: -k not implemented" >&2 ;;
+			p) ssh_opts+=(-o "Port $OPTARG") ;; # Compatible with scp & ssh
+			#@TODO: Implement quiet and verbose
+			# SSH options
+			*) ssh_opts+=("-$OPTION");
+			   [[ -n "$OPTARG" ]] && ssh_opts+=("$OPTARG") ;;
+			\?) exit 1 ;;
+		esac
+	done
+	shift $((OPTIND-1))
+	
+	ssh_host="$1"
+	ssh_path="${2%%/}"
+	if [[ -z "$1" || -z "$2" ]]; then
+		echo "Error: hostname and remote path are required" >&2
+		exit 1
+	fi
+	
+	# Check for non-interactive mode
+	if [[ ! $- = *i* ]]; then
+		ssh_opts+=(-o "BatchMode yes")
+	fi
+	
+	# Test connection
+	ssh "${ssh_opts[@]}" "$ssh_host" :
+	if [[ ! $? -eq 0 ]]; then
+		echo "Error: Connection to remote failed"
+		exit 1
+	fi
+	
+	# Loop through all directories in the server path
+	for path in $MINECRAFT_SERVER_PATH/*; do
+		# Verify world directory path
+		if [[ -d "$path/world" ]]; then
+			remote_backup_world "$path"
+		fi
+	done
+}
+
+if [[ ! -d "$MINECRAFT_SERVER_PATH" ]]; then
+	echo "Error: Failed to load world storage directory" >&2
+	echo "Make sure the MINECRAFT_SERVER_PATH env var is set" >&2
+	exit 1
+fi
+
+main "$@"

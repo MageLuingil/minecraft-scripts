@@ -1,0 +1,11 @@
+#!/bin/bash
+# Author: Daniel Matthies
+# Date: Sept. 5, 2020
+# 
+# List remote region files for the given minecraft world
+set -eo pipefail
+
+declare -r MAX_REGION=100
+declare -r WORLD_DIR="$1"
+
+find "$WORLD_DIR"/world/{,DIM1/,DIM-1/}region/ -type f | awk -F'.' '{if ($2 > '$MAX_REGION' || $2 < -'$MAX_REGION' || $3 > '$MAX_REGION' || $3 < -'$MAX_REGION') print $0}'

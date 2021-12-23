@@ -1,0 +1,55 @@
+#!/bin/bash
+# 
+# rsync active worlds to remote server
+# 
+# USAGE:
+# remote-backup [-1246Cqv] [-c cipher] [-F ssh_config] [-i identity] [-k days]
+#               [-o option] [-p port] [user@]hostname:remote_path
+# 
+# OPTIONS:
+#     Options above are passed directly to the ssh command (via rsync)
+# 
+# Add a crontab entry for this script:
+# 12 5 * * * minecraft /var/games/minecraft/scripts/rsync-worlds hostname path/on/remote
+
+set -eo pipefail
+
+MINECRAFT_SERVER_PATH="${MINECRAFT_SERVER_PATH:-/var/games/minecraft/servers/}"
+
+main() {
+	# Init variables
+	local OPTION OPTARG OPTIND
+	local rsync_dest rsh
+	local -a ssh_opts
+	
+	# Parse options
+	while getopts "1246Cc:F:i:o:p:qv" OPTION
+	do
+		#@TODO: Implement quiet and verbose
+		# SSH options
+		ssh_opts+=("-$OPTION")
+		[[ -n "$OPTARG" ]] && ssh_opts+=("$OPTARG")
+	done
+	shift $((OPTIND-1))
+	
+	rsync_dest="$1"
+	if [[ -z "$1" ]]; then
+		echo "Error: hostname and remote path are required" >&2
+		exit 1
+	fi
+	
+	rsh="ssh ${ssh_opts[@]}"
+	
+	# Find active worlds and pass to rsync
+	cd "$MINECRAFT_SERVER_PATH"
+	find . -maxdepth 2 -type f -name active -printf '%h\0' | \
+		rsync -Ear --delete --safe-links --no-relative --rsh="$rsh" --files-from=- --from0 "$MINECRAFT_SERVER_PATH" "$rsync_dest"
+}
+
+if [[ ! -d "$MINECRAFT_SERVER_PATH" ]]; then
+	echo "Error: Failed to load world storage directory" >&2
+	echo "Make sure the MINECRAFT_SERVER_PATH env var is set" >&2
+	exit 1
+fi
+
+main "$@"

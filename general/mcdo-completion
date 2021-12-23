@@ -1,0 +1,2 @@
+#!/bin/sh
+. /usr/share/bash-completion/completions/sudo && complete -F _sudo mcdo
