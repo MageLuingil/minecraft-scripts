@@ -1,0 +1,14 @@
+[Unit]
+Description=Start Shulker Minecraft-Discord integration
+After=network.target mineos.service
+
+[Service]
+User=minecraft
+WorkingDirectory=/usr/games/minecraft-discord
+Environment=SHELL=/bin/bash NODE_VERSION=16
+ExecStart=/var/games/minecraft/.nvm/nvm-exec npm run start
+PIDFile=/var/run/shulker.pid
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
