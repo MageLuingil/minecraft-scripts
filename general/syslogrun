@@ -1,2 +1,8 @@
 #!/bin/bash
-exec "$@" 1> >(logger -t "$(basename -s .sh $1)") 2>&1
+if hash systemd-cat 2>/dev/null; then
+	# If systemd is present, use journalctl
+	systemd-cat --stderr-priority err -t "$(basename -s .sh $1)" "$@"
+else
+	# Otherwise, fall back to system logger utility
+	exec "$@" 1> >(logger -t "$(basename -s .sh $1)") 2>&1
+fi
