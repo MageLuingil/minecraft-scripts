@@ -1,6 +1,6 @@
 [Unit]
 Description=Shulker Minecraft-Discord Integration for %i
-After=network.target mineos.service
+After=network.target msm.service
 
 [Service]
 User=minecraft

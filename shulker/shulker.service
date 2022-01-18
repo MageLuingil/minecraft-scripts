@@ -1,6 +1,6 @@
 [Unit]
 Description=Start Shulker Minecraft-Discord integration
-After=network.target mineos.service
+After=network.target msm.service
 
 [Service]
 User=minecraft
