@@ -42,8 +42,9 @@ main() {
 	
 	# Find active worlds and pass to rsync
 	cd "$MINECRAFT_SERVER_PATH"
-	find . -maxdepth 2 -type f -name active -printf '%h\0' | \
-		rsync -Ear --delete --safe-links --no-relative --rsh="$rsh" --files-from=- --from0 "$MINECRAFT_SERVER_PATH" "$rsync_dest"
+	find . -maxdepth 2 -type f -name active -printf '%h\0' | tee >/dev/null \
+		>(xargs -0 -n1 -I{} sh -c "echo \"Backing up $(basename {}) to $rsync_dest\"") \
+		>(rsync -Ear --dry-run --delete --safe-links --no-relative --rsh="$rsh" --files-from=- --from0 "$MINECRAFT_SERVER_PATH" "$rsync_dest")
 }
 
 if [[ ! -d "$MINECRAFT_SERVER_PATH" ]]; then
