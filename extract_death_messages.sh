@@ -61,7 +61,7 @@ extract_lang_1_6() {
 }
 
 # Args: filename lang
-extract_lang_1_6() {
+extract_lang_1_11() {
 	unzip -p "$1" "assets/minecraft/lang/${2,,}.lang" | \
 		sed -n '/death\./ s/death\.[.a-zA-Z]*=%1$s/PlayerName/p'
 }
