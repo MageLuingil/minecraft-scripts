@@ -122,6 +122,6 @@ main() {
 	rm changes.tmp
 }
 
-check_for_commands dpkg jq curl sed comm
+check_for_commands dpkg jq curl sed diff
 
 main "$@"
