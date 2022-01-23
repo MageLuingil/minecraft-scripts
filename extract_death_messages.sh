@@ -92,6 +92,9 @@ main() {
 		elif version_gte "$version" "1.13"; then
 			echo "Extracting death messages for $version"
 			extract_lang_1_13 "$file" "$LANG" > "$msgfile"
+		elif version_gte "$version" "1.11"; then
+			echo "Extracting death messages for $version"
+			extract_lang_1_11 "$file" "$LANG" > "$msgfile"
 		elif version_gte "$version" "1.6"; then
 			echo "Extracting death messages for $version"
 			extract_lang_1_6 "$file" "$LANG" > "$msgfile"
