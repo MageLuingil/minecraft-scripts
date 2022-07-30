@@ -1,0 +1,65 @@
+#!/bin/bash
+# 
+# Clean up old minecraft rdiff-backups
+# 
+# USAGE:
+# clean-backups [-d] [-k keep] dir ...
+# 
+# OPTIONS
+#     -d      Dry run - print increments to be deleted, but do not delete
+#     -k num  The number of backups to keep (by default keeps 180 backups)
+# 
+# Add a crontab entry for this script:
+# 12 5 * * * minecraft /path/to/scripts/clean-rdiff-backups /var/games/minecraft/backup/*
+set -eo pipefail
+
+cleanWorldBackups() {
+	local backup_dir="$1"
+	local backup_count="$(rdiff-backup -l "$backup_dir" | awk '/Found/ { print $2 }')"
+	
+	if (( backup_count <= keep )); then
+		echo "Nothing to clean"
+		exit 0
+	fi
+	
+	# "Safely" clean backups (one at a time to prevent errors)
+	for i in $(seq $(( $backup_count - 1 )) -1 $keep); do
+		if $dry_run; then
+			echo "rdiff-backup --delete-older-than ${i}B"
+		else
+			rdiff-backup --delete-older-than "${i}B"
+		fi
+	done
+}
+
+main() {
+	# Init variables
+	local OPTION OPTARG OPTIND
+	local dry_run=false keep=180
+	
+	# Parse options
+	while getopts "dk:" OPTION; do
+		case "$OPTION" in
+			d) dry_run=true ;;
+			k) keep=$OPTARG ;;
+		esac
+	done
+	shift $((OPTIND-1))
+	
+	# Validate options
+	if (( $keep < 1 )); then
+		echo "Started without keeping any backups - this is probably not what you want!" >&2
+		exit 1
+	fi
+	
+	local backup_path
+	for backup_path in "$@"; do
+		if [[ -d "$backup_path/rdiff-backup-data" ]] && rdiff-backup -l "$backup_path" >/dev/null 2>&1; then
+			cleanWorldBackups "$backup_path"
+		else
+			echo "Invalid backup directory $backup_path" >&2
+		fi
+	done
+}
+
+main "$@"
