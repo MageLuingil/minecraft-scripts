@@ -16,6 +16,7 @@ set -eo pipefail
 cleanWorldBackups() {
 	local backup_dir="$1"
 	local backup_count="$(rdiff-backup -l "$backup_dir" | awk '/Found/ { print $2 }')"
+	$verbose && echo "Found $backup_count total backups in $backup_dir"
 	
 	if (( backup_count <= keep )); then
 		echo "Nothing to clean"
@@ -24,8 +25,9 @@ cleanWorldBackups() {
 	
 	# "Safely" clean backups (one at a time to prevent errors)
 	for i in $(seq $(( $backup_count - 1 )) -1 $keep); do
+		$verbose && echo "Removing older than $i in $backup_dir"
 		if $dry_run; then
-			echo "rdiff-backup --remove-older-than ${i}B" "$backup_dir"
+			echo "rdiff-backup --remove-older-than ${i}B $backup_dir"
 		else
 			rdiff-backup --remove-older-than "${i}B" "$backup_dir"
 		fi
@@ -35,13 +37,14 @@ cleanWorldBackups() {
 main() {
 	# Init variables
 	local OPTION OPTARG OPTIND
-	local dry_run=false keep=180
+	local dry_run=false keep=180 verbose=false
 	
 	# Parse options
-	while getopts "dk:" OPTION; do
+	while getopts "dk:v" OPTION; do
 		case "$OPTION" in
 			d) dry_run=true ;;
 			k) keep=$OPTARG ;;
+			v) verbose=true ;;
 		esac
 	done
 	shift $((OPTIND-1))
