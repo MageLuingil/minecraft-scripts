@@ -20,7 +20,7 @@ cleanWorldBackups() {
 	
 	if (( backup_count <= keep )); then
 		echo "Nothing to clean"
-		exit 0
+		return 0
 	fi
 	
 	# "Safely" clean backups (one at a time to prevent errors)
