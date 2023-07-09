@@ -10,8 +10,7 @@
 #     -k num  The number of backups to keep (by default keeps 180 backups)
 # 
 # Add a crontab entry for this script:
-# 12 5 * * * minecraft /path/to/scripts/clean-rdiff-backups /var/games/minecraft/backup/*
-set -eo pipefail
+# 12 5 * * * minecraft /path/to/scripts/clean-backups /var/games/minecraft/backup/*
 
 cleanWorldBackups() {
 	local backup_dir="$1"
@@ -38,6 +37,7 @@ main() {
 	# Init variables
 	local OPTION OPTARG OPTIND
 	local dry_run=false keep=180 verbose=false
+	local -i status=0 last_status=0
 	
 	# Parse options
 	while getopts "dk:v" OPTION; do
@@ -52,17 +52,24 @@ main() {
 	# Validate options
 	if (( $keep < 1 )); then
 		echo "Started without keeping any backups - this is probably not what you want!" >&2
-		exit 1
+		exit 2
 	fi
 	
 	local backup_path
 	for backup_path in "$@"; do
 		if [[ -d "$backup_path/rdiff-backup-data" ]] && rdiff-backup -l "$backup_path" >/dev/null 2>&1; then
 			cleanWorldBackups "$backup_path"
+			last_status=$?
+			if [[ $last_status != 0 ]]; then
+				echo "Cleaning $backup_path failed with status $last_status" >&2
+				status=1
+			fi
 		else
 			echo "Invalid backup directory $backup_path" >&2
 		fi
 	done
+	
+	return $status
 }
 
 main "$@"
