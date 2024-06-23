@@ -29,16 +29,16 @@ check_for_commands() {
 # Download all client jar files into ./jars/
 fetch_clients() {
 	local version url
-	[[ -d jars ]] || mkdir jars
+	[[ -d data/jars ]] || mkdir -p data/jars
 	echo "Downloading version manifest..."
 	curl -Ss "https://launchermeta.mojang.com/mc/game/version_manifest.json" | \
 		jq -r '.versions | map(select(.type | contains("release"))) | .[] | "\(.id) \(.url)"' | \
 		while read version url; do
 			# Only download client if we're missing death messages for this
 			# version, and the client hasn't already been downloaded
-			if [[ ! -f "msgs/$LANG/${version}.txt" && ! -f "jars/client-${version}.jar" ]]; then
+			if [[ ! -f "data/msgs/$LANG/${version}.txt" && ! -f "data/jars/client-${version}.jar" ]]; then
 				echo "Downloading client for $version"
-				curl -Ss "$url" | jq -r '.downloads.client.url' | xargs -I{} curl -Sso "jars/client-${version}.jar" "{}"
+				curl -Ss "$url" | jq -r '.downloads.client.url' | xargs -I{} curl -Sso "data/jars/client-${version}.jar" "{}"
 			fi
 		done
 }
@@ -78,11 +78,11 @@ main() {
 	
 	fetch_clients
 	
-	printf '%s\n' jars/client-*.jar | sort -V | \
+	printf '%s\n' data/jars/client-*.jar | sort -V | \
 	while read file; do
 		local basename="$(basename $file .jar)"
 		local version="${basename#client-}"
-		local msgfile="msgs/$LANG/${version}.txt"
+		local msgfile="data/msgs/$LANG/${version}.txt"
 		
 		mkdir -p "$(dirname $msgfile)"
 		
