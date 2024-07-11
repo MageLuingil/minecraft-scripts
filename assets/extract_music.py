@@ -7,9 +7,9 @@ import json, os, platform, shutil, sys
 '''
 
 def validateAssetsPath(path):
-    return os.path.exists(path) \
-        and os.path.exists(os.path.join(path, "indexes")) \
-        and os.path.exists(os.path.join(path, "objects"))
+    return os.path.isdir(path) \
+        and os.path.isdir(os.path.join(path, "indexes")) \
+        and os.path.isdir(os.path.join(path, "objects"))
 
 # Search for a valid minecraft assets directory, looking in:
 # - the current working directory
@@ -28,15 +28,17 @@ def getAssetsPath():
     if platform.system() == "Windows" and validateAssetsPath(winPath):
         return winPath
     
-    print(f"Minecraft assets directory not found", file=sys.stderr)
+    print("Minecraft assets directory not found", file=sys.stderr)
     sys.exit(1)
 
 def getObjectIndex(assetsPath):
-    indexes = os.listdir(os.path.join(assetsPath, "indexes"))
+    indexes = [os.path.join(assetsPath, "indexes", f) for f in os.listdir(os.path.join(assetsPath, "indexes"))]
+    indexes.sort(key=lambda f: os.path.getctime(f))
     if len(indexes) < 1:
         print("Minecraft object index not found", file=sys.stderr)
         sys.exit(1)
-    with open(os.path.join(assetsPath, "indexes", indexes[-1]), "r") as fp:
+    print(f"Using index {indexes[-1]}")
+    with open(indexes[-1], "r") as fp:
          return json.load(fp)
 
 def getObjectsWithPrefix(prefix, index):
@@ -64,7 +66,6 @@ def copySoundObjectsOfType(type, assetsPath, index):
 ###############
 
 assets = getAssetsPath()
-print(f"Using assets from {assets}")
 index = getObjectIndex(assets)
 
 copySoundObjectsOfType("music", assets, index)
